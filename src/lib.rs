@@ -115,7 +115,7 @@ getrandom::register_custom_getrandom!(getrandom);
 
 // ----------------------------------------------------------------------------
 
-use egui::CursorIcon;
+use egui::{CursorIcon, Modifiers, MouseWheelUnit};
 use miniquad as mq;
 
 pub use painter::CallbackFn;
@@ -145,7 +145,6 @@ impl EguiMq {
             egui_ctx: egui::Context::default(),
             painter: painter::Painter::new(mq_ctx),
             egui_input: egui::RawInput {
-                pixels_per_point: Some(native_dpi_scale),
                 ..Default::default()
             },
             #[cfg(target_os = "macos")]
@@ -173,7 +172,6 @@ impl EguiMq {
         if self.native_dpi_scale != miniquad::window::dpi_scale() {
             // DPI scale change (maybe new monitor?). Tell egui to change:
             self.native_dpi_scale = miniquad::window::dpi_scale();
-            self.egui_input.pixels_per_point = Some(self.native_dpi_scale);
         }
 
         let full_output = self
@@ -182,9 +180,10 @@ impl EguiMq {
 
         let egui::FullOutput {
             platform_output,
-            repaint_after: _, // miniquad always runs at full framerate
             textures_delta,
             shapes,
+            pixels_per_point,
+            viewport_output,
         } = full_output;
 
         if self.shapes.is_some() {
@@ -198,7 +197,6 @@ impl EguiMq {
             open_url,
             copied_text,
             events: _,                    // no screen reader
-            text_cursor_pos: _,           // no IME
             mutable_text_under_cursor: _, // no IME
             ..
         } = platform_output;
@@ -226,7 +224,7 @@ impl EguiMq {
     /// Must be called after `end_frame`.
     pub fn draw(&mut self, mq_ctx: &mut dyn mq::RenderingBackend) {
         if let Some(shapes) = self.shapes.take() {
-            let meshes = self.egui_ctx.tessellate(shapes);
+            let meshes = self.egui_ctx.tessellate(shapes, self.native_dpi_scale);
             self.painter.paint_and_update_textures(
                 mq_ctx,
                 meshes,
@@ -256,7 +254,11 @@ impl EguiMq {
             // Treat as zoom instead:
             egui::Event::Zoom((delta.y / 200.0).exp())
         } else {
-            egui::Event::Scroll(delta)
+            egui::Event::MouseWheel {
+                unit: MouseWheelUnit::Point,
+                delta,
+                modifiers: Modifiers::NONE,
+            }
         };
         self.egui_input.events.push(event);
     }
@@ -323,6 +325,7 @@ impl EguiMq {
                 pressed: true,
                 modifiers,
                 repeat: false, // egui will set this for us
+                physical_key: None,
             })
         }
     }
@@ -337,6 +340,7 @@ impl EguiMq {
                 pressed: false,
                 modifiers,
                 repeat: false, // egui will set this for us
+                physical_key: None,
             })
         }
     }
