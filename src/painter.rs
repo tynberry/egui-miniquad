@@ -90,7 +90,7 @@ impl Painter {
                     width: 0,
                     height: 0,
                     allocate_mipmaps: false,
-                    sample_count: 1,
+                    sample_count: 0,
                 },
             )],
         };
@@ -157,7 +157,7 @@ impl Painter {
                 mag_filter: filter,
                 mipmap_filter: miniquad::MipmapFilterMode::Nearest,
                 allocate_mipmaps: true,
-                sample_count: 1,
+                sample_count: 0,
             };
 
             let texture = match &delta.image {
