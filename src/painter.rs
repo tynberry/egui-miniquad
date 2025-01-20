@@ -90,7 +90,7 @@ impl Painter {
                     width: 0,
                     height: 0,
                     allocate_mipmaps: false,
-                    sample_count: 1,
+                    sample_count: 0,
                 },
             )],
         };
