@@ -90,7 +90,7 @@ impl Painter {
                     width: 0,
                     height: 0,
                     allocate_mipmaps: false,
-                    sample_count: 0,
+                    sample_count: 1,
                 },
             )],
         };
@@ -168,6 +168,7 @@ impl Painter {
                         "Mismatch between texture size and texel count"
                     );
                     let data: &[u8] = bytemuck::cast_slice(image.pixels.as_ref());
+                    println!("Params: {:?}", params);
                     ctx.new_texture_from_data_and_format(data, params)
                 }
                 egui::ImageData::Font(image) => {
@@ -182,6 +183,7 @@ impl Painter {
                         .flat_map(|a| a.to_array())
                         .collect();
 
+                    println!("Params: {:?}", params);
                     ctx.new_texture_from_data_and_format(&data, params)
                 }
             };
