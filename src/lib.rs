@@ -165,7 +165,7 @@ impl EguiMq {
     pub fn run(
         &mut self,
         mq_ctx: &mut dyn mq::RenderingBackend,
-        run_ui: impl FnOnce(&mut dyn mq::RenderingBackend, &egui::Context),
+        mut run_ui: impl FnMut(&mut dyn mq::RenderingBackend, &egui::Context),
     ) {
         input::on_frame_start(&mut self.egui_input, &self.egui_ctx);
 
@@ -182,8 +182,8 @@ impl EguiMq {
             platform_output,
             textures_delta,
             shapes,
-            pixels_per_point,
-            viewport_output,
+            pixels_per_point: _,
+            viewport_output: _,
         } = full_output;
 
         if self.shapes.is_some() {
