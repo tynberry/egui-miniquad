@@ -141,13 +141,12 @@ pub struct EguiMq {
 
 impl EguiMq {
     pub fn new(mq_ctx: &mut mq::Context) -> Self {
-        let native_dpi_scale = mq_ctx.dpi_scale();
+        let native_dpi_scale = miniquad::window::dpi_scale();
         Self {
             native_dpi_scale,
             egui_ctx: egui::Context::default(),
             painter: painter::Painter::new(mq_ctx),
             egui_input: egui::RawInput {
-                pixels_per_point: Some(native_dpi_scale),
                 ..Default::default()
             },
             #[cfg(target_os = "macos")]
@@ -168,14 +167,14 @@ impl EguiMq {
     pub fn run(
         &mut self,
         mq_ctx: &mut mq::Context,
-        run_ui: impl FnOnce(&mut mq::Context, &egui::Context),
+        mut run_ui: impl FnMut(&mut mq::Context, &egui::Context),
     ) {
         input::on_frame_start(&mut self.egui_input, &self.egui_ctx, mq_ctx);
 
-        if self.native_dpi_scale != mq_ctx.dpi_scale() {
+        if self.native_dpi_scale != miniquad::window::dpi_scale() {
             // DPI scale change (maybe new monitor?). Tell egui to change:
-            self.native_dpi_scale = mq_ctx.dpi_scale();
-            self.egui_input.pixels_per_point = Some(self.native_dpi_scale);
+            self.native_dpi_scale = miniquad::window::dpi_scale();
+            //self.egui_input.pixels_per_point = Some(self.native_dpi_scale);
         }
 
         let full_output = self
@@ -184,9 +183,10 @@ impl EguiMq {
 
         let egui::FullOutput {
             platform_output,
-            repaint_after: _, // miniquad always runs at full framerate
             textures_delta,
             shapes,
+            pixels_per_point: _,
+            viewport_output: _,
         } = full_output;
 
         if self.shapes.is_some() {
@@ -200,7 +200,6 @@ impl EguiMq {
             open_url,
             copied_text,
             events: _,                    // no screen reader
-            text_cursor_pos: _,           // no IME
             mutable_text_under_cursor: _, // no IME
             ..
         } = platform_output;
@@ -210,13 +209,13 @@ impl EguiMq {
         }
 
         if cursor_icon == egui::CursorIcon::None {
-            mq_ctx.show_mouse(false);
+            miniquad::window::show_mouse(false);
         } else {
-            mq_ctx.show_mouse(true);
+            miniquad::window::show_mouse(true);
 
             let mq_cursor_icon = to_mq_cursor_icon(cursor_icon);
             let mq_cursor_icon = mq_cursor_icon.unwrap_or(mq::CursorIcon::Default);
-            mq_ctx.set_mouse_cursor(mq_cursor_icon);
+            miniquad::window::set_mouse_cursor(mq_cursor_icon);
         }
 
         if !copied_text.is_empty() {
@@ -228,7 +227,7 @@ impl EguiMq {
     /// Must be called after `end_frame`.
     pub fn draw(&mut self, mq_ctx: &mut mq::Context) {
         if let Some(shapes) = self.shapes.take() {
-            let meshes = self.egui_ctx.tessellate(shapes);
+            let meshes = self.egui_ctx.tessellate(shapes, self.native_dpi_scale);
             self.painter.paint_and_update_textures(
                 mq_ctx,
                 meshes,
@@ -258,7 +257,11 @@ impl EguiMq {
             // Treat as zoom instead:
             egui::Event::Zoom((delta.y / 200.0).exp())
         } else {
-            egui::Event::Scroll(delta)
+            egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta,
+                modifiers: self.egui_input.modifiers,
+            }
         };
         self.egui_input.events.push(event);
     }
@@ -339,6 +342,7 @@ impl EguiMq {
         } else if let Some(key) = input::egui_key_from_mq_key(keycode) {
             self.egui_input.events.push(egui::Event::Key {
                 key,
+                physical_key: None,
                 pressed: true,
                 modifiers,
                 repeat: false, // egui will set this for us
@@ -353,6 +357,7 @@ impl EguiMq {
         if let Some(key) = input::egui_key_from_mq_key(keycode) {
             self.egui_input.events.push(egui::Event::Key {
                 key,
+                physical_key: None,
                 pressed: false,
                 modifiers,
                 repeat: false, // egui will set this for us
@@ -361,13 +366,13 @@ impl EguiMq {
     }
 
     #[cfg(not(target_os = "macos"))]
-    fn set_clipboard(&mut self, mq_ctx: &mut mq::Context, text: String) {
-        mq_ctx.clipboard_set(&text);
+    fn set_clipboard(&mut self, _mq_ctx: &mut mq::Context, text: String) {
+        miniquad::window::clipboard_set(&text);
     }
 
     #[cfg(not(target_os = "macos"))]
-    fn get_clipboard(&mut self, mq_ctx: &mut mq::Context) -> Option<String> {
-        mq_ctx.clipboard_get()
+    fn get_clipboard(&mut self, _mq_ctx: &mut mq::Context) -> Option<String> {
+        miniquad::window::clipboard_get()
     }
 
     #[cfg(target_os = "macos")]
