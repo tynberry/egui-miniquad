@@ -17,7 +17,7 @@ keywords = ["gui", "imgui", "immediate", "portable", "gamedev"]
 include = ["../LICENSE-APACHE", "../LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 
 [dependencies]
-bytemuck = "1.9"
+bytemuck = "1.*"
 egui = { version = "0.33.3", features = ["bytemuck"] }
 miniquad = { version = "=0.4.8" }
 quad-url = "0.1"
