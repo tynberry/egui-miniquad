@@ -194,15 +194,28 @@ impl EguiMq {
 
         let egui::PlatformOutput {
             cursor_icon,
-            open_url,
-            copied_text,
+            //open_url,
+            //copied_text,
             events: _,                    // no screen reader
             mutable_text_under_cursor: _, // no IME
-            ..
+            commands,
+            ime: _, //no IME
+            num_completed_passes: _,
+            request_discard_reasons: _,
         } = platform_output;
 
-        if let Some(url) = open_url {
-            quad_url::link_open(&url.url, url.new_tab);
+        for command in commands {
+            match command {
+                egui::OutputCommand::CopyText(copied_text) => {
+                    self.set_clipboard(copied_text);
+                }
+                egui::OutputCommand::CopyImage(_) => {
+                    //unsupported
+                }
+                egui::OutputCommand::OpenUrl(url) => {
+                    quad_url::link_open(&url.url, url.new_tab);
+                }
+            }
         }
 
         if cursor_icon == egui::CursorIcon::None {
@@ -213,10 +226,6 @@ impl EguiMq {
             let mq_cursor_icon = to_mq_cursor_icon(cursor_icon);
             let mq_cursor_icon = mq_cursor_icon.unwrap_or(mq::CursorIcon::Default);
             miniquad::window::set_mouse_cursor(mq_cursor_icon);
-        }
-
-        if !copied_text.is_empty() {
-            self.set_clipboard(copied_text);
         }
     }
 
